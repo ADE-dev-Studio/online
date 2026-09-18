@@ -1,0 +1,64 @@
+name: Array
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "add or remove"
+        required: true
+        type: choice
+        options:
+          - add
+          - remove
+
+      value:
+        description: "Value"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update array
+        env:
+          ACTION: ${{ inputs.action }}
+          VALUE: ${{ inputs.value }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          file = "array.json"
+
+          with open(file, "r") as f:
+              array = json.load(f)
+
+          value = os.environ["VALUE"]
+          action = os.environ["ACTION"]
+
+          if action == "add":
+              if value not in array:
+                  array.append(value)
+
+          elif action == "remove":
+              if value in array:
+                  array.remove(value)
+
+          with open(file, "w") as f:
+              json.dump(array, f, indent=2)
+          PY
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add array.json
+          git commit -m "Update array" || exit 0
+          git push
