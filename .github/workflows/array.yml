@@ -19,12 +19,21 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: array-updates
+  queue: max
+
 jobs:
   update:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Get latest data
+        run: |
+          git fetch origin main
+          git reset --hard origin/main
 
       - name: Update array
         env:
@@ -35,7 +44,7 @@ jobs:
           import json
           import os
 
-          file = "array.json"
+          file = "data.json"
 
           with open(file, "r") as f:
               array = json.load(f)
@@ -48,17 +57,21 @@ jobs:
                   array.append(value)
 
           elif action == "remove":
-              if value in array:
+              while value in array:
                   array.remove(value)
 
           with open(file, "w") as f:
               json.dump(array, f, indent=2)
+
+          print("New array:")
+          print(json.dumps(array, indent=2))
           PY
 
       - name: Commit changes
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add array.json
+
+          git add data.json
           git commit -m "Update array" || exit 0
           git push
